@@ -4,6 +4,7 @@ import cats.implicits._
 import io.circe._
 import io.circe.generic.auto._
 import io.circe.syntax._
+import io.circe.literal._
 
 import org.http4s._
 import org.http4s.circe._
@@ -18,16 +19,18 @@ object MyMain extends IOApp {
   case class Greeting(message: String)
 
   val helloWorldService = HttpRoutes.of[IO] {
-    case GET -> Root / "hello" / name =>
-      Ok(s"Hello, $name.")
+    case GET -> Root / "hello" / name => Ok(s"Hello, $name.")
   }
 
   val greetService = HttpRoutes.of[IO] {
-    case GET -> Root / "greet"  =>
-      Ok(Greeting("hello there").asJson)
+    case GET -> Root / "greet"  => Ok(Greeting("hello there").asJson)
   }
 
-  val httpApp=(helloWorldService <+> greetService).orNotFound
+  val literal = HttpRoutes.of[IO] {
+    case GET -> Root / "literal"  => Ok(json"""{"hello": "buddy"}""")
+  }
+
+  val httpApp=(helloWorldService <+> greetService <+> literal).orNotFound
 
   def run(args: List[String]): IO[ExitCode] =
     BlazeServerBuilder[IO]
