@@ -12,6 +12,8 @@ import org.http4s.dsl.io._
 import org.http4s.implicits._
 import org.http4s.server.blaze._
 
+import org.http4s.server.middleware._
+
 object MyMain extends IOApp {
 
   import io.circe.generic.auto._
@@ -30,7 +32,11 @@ object MyMain extends IOApp {
     case GET -> Root / "literal"  => Ok(json"""{"hello": "buddy"}""")
   }
 
-  val httpApp=(helloWorldService <+> greetService <+> literal).orNotFound
+  val lotsoftext = GZip(HttpRoutes.of[IO] {
+    case GET -> Root / "gzip"  => Ok(s"ABCD ABCD ABCD ABCD ABCD ABCD ABCD "*100)
+  })
+
+  val httpApp=(helloWorldService <+> greetService <+> literal <+> lotsoftext).orNotFound
 
   def run(args: List[String]): IO[ExitCode] =
     BlazeServerBuilder[IO]
@@ -40,4 +46,6 @@ object MyMain extends IOApp {
       .compile
       .drain
       .as(ExitCode.Success)
+
+// put in https://github.com/http4s/rho
 }
