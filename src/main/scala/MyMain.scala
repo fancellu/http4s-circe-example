@@ -68,6 +68,4 @@ object MyMain extends IOApp {
       .drain
       .as(ExitCode.Success)
 
-// put in https://github.com/http4s/rho
-  //   https://github.com/softwaremill/tapir
 }
