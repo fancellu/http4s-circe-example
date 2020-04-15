@@ -13,10 +13,14 @@ import org.http4s.implicits._
 import org.http4s.server.blaze._
 import org.http4s.server.middleware._
 import org.http4s.server.staticcontent._
+import play.twirl.api.Html
+import org.http4s.twirl._
+
+import scala.concurrent.duration._
+import fs2.Stream
+import io.circe.generic.auto._
 
 object MyMain extends IOApp {
-
-  import io.circe.generic.auto._
 
   case class Greeting(message: String)
 
@@ -33,8 +37,18 @@ object MyMain extends IOApp {
   }
 
   val lotsoftext = GZip(HttpRoutes.of[IO] {
-    case GET -> Root / "gzip"  => Ok(s"ABCD ABCD ABCD ABCD ABCD ABCD ABCD "*100)
+    case GET -> Root / "gzip"  => Ok(s"ABCD "*700)
   })
+
+  val seconds = Stream.awakeEvery[IO](2.second)
+
+  val mystream = HttpRoutes.of[IO] {
+    case GET -> Root / "mystream"  => Ok(seconds.map(dur=> dur.toString))
+  }
+
+  val twirl = HttpRoutes.of[IO] {
+    case GET -> Root / "twirl"  => Ok(view.html.index(s"hello from twirl ${new java.util.Date}"))
+  }
 
   val blockingPool = Executors.newFixedThreadPool(4)
   val blocker = Blocker.liftExecutorService(blockingPool)
@@ -43,7 +57,7 @@ object MyMain extends IOApp {
   val fs=resourceService[IO](ResourceService.Config("/", blocker,pathPrefix = "/fs"))
 
   val httpApp=(helloWorldService <+> greetService <+> literal <+> lotsoftext
-    <+> fs).orNotFound
+    <+> fs <+> mystream <+> twirl).orNotFound
 
   def run(args: List[String]): IO[ExitCode] =
     BlazeServerBuilder[IO]
@@ -55,4 +69,5 @@ object MyMain extends IOApp {
       .as(ExitCode.Success)
 
 // put in https://github.com/http4s/rho
+  //   https://github.com/softwaremill/tapir
 }
