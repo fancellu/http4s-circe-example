@@ -24,39 +24,39 @@ object MyMain extends IOApp {
 
   case class Greeting(message: String)
 
-  val helloWorldService = HttpRoutes.of[IO] {
+  private val helloWorldService = HttpRoutes.of[IO] {
     case GET -> Root / "hello" / name => Ok(s"Hello, $name.")
   }
 
-  val greetService = HttpRoutes.of[IO] {
+  private val greetService = HttpRoutes.of[IO] {
     case GET -> Root / "greet"  => Ok(Greeting("hello there").asJson)
   }
 
-  val literal = HttpRoutes.of[IO] {
+  private val literal = HttpRoutes.of[IO] {
     case GET -> Root / "literal"  => Ok(json"""{"hello": "buddy"}""")
   }
 
-  val lotsoftext = GZip(HttpRoutes.of[IO] {
+  private val lotsoftext = GZip(HttpRoutes.of[IO] {
     case GET -> Root / "gzip"  => Ok(s"ABCD "*700)
   })
 
-  val seconds = Stream.awakeEvery[IO](2.second)
+  private val seconds = Stream.awakeEvery[IO](2.second)
 
-  val mystream = HttpRoutes.of[IO] {
+  private val mystream = HttpRoutes.of[IO] {
     case GET -> Root / "mystream"  => Ok(seconds.map(dur=> dur.toString))
   }
 
-  val twirl = HttpRoutes.of[IO] {
+  private val twirl = HttpRoutes.of[IO] {
     case GET -> Root / "twirl"  => Ok(view.html.index(s"hello from twirl ${new java.util.Date}"))
   }
 
-  val blockingPool = Executors.newFixedThreadPool(4)
-  val blocker = Blocker.liftExecutorService(blockingPool)
+  private val blockingPool = Executors.newFixedThreadPool(4)
+  private val blocker = Blocker.liftExecutorService(blockingPool)
 
   //val fs=fileService[IO](FileService.Config("./src/main/resources", blocker,pathPrefix = "/fs"))
-  val fs=resourceService[IO](ResourceService.Config("/", blocker,pathPrefix = "/fs"))
+  private val fs=resourceService[IO](ResourceService.Config("/", blocker,pathPrefix = "/fs"))
 
-  val httpApp=(helloWorldService <+> greetService <+> literal <+> lotsoftext
+  private val httpApp=(helloWorldService <+> greetService <+> literal <+> lotsoftext
     <+> fs <+> mystream <+> twirl).orNotFound
 
   def run(args: List[String]): IO[ExitCode] =

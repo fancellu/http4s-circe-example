@@ -1,5 +1,7 @@
 # http4s-circe-example
 
+Example of http4s server with various endpoints
+
 ## Endpoints
 
 /greet
