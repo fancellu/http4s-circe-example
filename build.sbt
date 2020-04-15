@@ -1,4 +1,4 @@
-name := "http4s-example"
+name := "http4s-circe-example"
 
 version := "0.1"
 

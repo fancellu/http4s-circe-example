@@ -1,18 +1,18 @@
+import java.util.concurrent.Executors
+
 import cats.effect._
 import cats.implicits._
-
 import io.circe._
 import io.circe.generic.auto._
 import io.circe.syntax._
 import io.circe.literal._
-
 import org.http4s._
 import org.http4s.circe._
 import org.http4s.dsl.io._
 import org.http4s.implicits._
 import org.http4s.server.blaze._
-
 import org.http4s.server.middleware._
+import org.http4s.server.staticcontent._
 
 object MyMain extends IOApp {
 
@@ -36,7 +36,14 @@ object MyMain extends IOApp {
     case GET -> Root / "gzip"  => Ok(s"ABCD ABCD ABCD ABCD ABCD ABCD ABCD "*100)
   })
 
-  val httpApp=(helloWorldService <+> greetService <+> literal <+> lotsoftext).orNotFound
+  val blockingPool = Executors.newFixedThreadPool(4)
+  val blocker = Blocker.liftExecutorService(blockingPool)
+
+  //val fs=fileService[IO](FileService.Config("./src/main/resources", blocker,pathPrefix = "/fs"))
+  val fs=resourceService[IO](ResourceService.Config("/", blocker,pathPrefix = "/fs"))
+
+  val httpApp=(helloWorldService <+> greetService <+> literal <+> lotsoftext
+    <+> fs).orNotFound
 
   def run(args: List[String]): IO[ExitCode] =
     BlazeServerBuilder[IO]
