@@ -8,7 +8,10 @@ Example of http4s server with various endpoints
 => json
 
 /hello/{name}
-=> json
+=> text
+
+/hello?name=
+=> text
 
 /literal
 => json

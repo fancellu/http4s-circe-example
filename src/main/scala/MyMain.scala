@@ -28,6 +28,12 @@ object MyMain extends IOApp {
     case GET -> Root / "hello" / name => Ok(s"Hello, $name.")
   }
 
+  object NameQueryParamMatcher extends QueryParamDecoderMatcher[String]("name")
+
+  private val helloWorldService2 = HttpRoutes.of[IO] {
+    case GET -> Root / "hello" :? NameQueryParamMatcher(name) => Ok(s"""Hello, $name.""")
+  }
+
   private val greetService = HttpRoutes.of[IO] {
     case GET -> Root / "greet"  => Ok(Greeting("hello there").asJson)
   }
@@ -55,7 +61,7 @@ object MyMain extends IOApp {
 
   private val fs=resourceServiceBuilder[IO]("/").withPathPrefix("/fs").toRoutes
 
-  private val httpApp=(helloWorldService <+> greetService <+> literal <+> lotsoftext
+  private val httpApp=(helloWorldService <+> helloWorldService2 <+> greetService <+> literal <+> lotsoftext
     <+> fs <+> mystream <+> twirl).orNotFound
 
   def run(args: List[String]): IO[ExitCode] =
