@@ -10,7 +10,7 @@ import org.http4s._
 import org.http4s.circe._
 import org.http4s.dsl.io._
 import org.http4s.implicits._
-import org.http4s.server.blaze._
+import org.http4s.blaze.server._
 import org.http4s.server.middleware._
 import org.http4s.server.staticcontent._
 import play.twirl.api.Html
@@ -33,7 +33,8 @@ object MyMain extends IOApp {
   }
 
   private val literal = HttpRoutes.of[IO] {
-    case GET -> Root / "literal"  => Ok(json"""{"hello": "buddy"}""")
+    case GET -> Root / "literal"  => Ok(
+      json"""{ "hello": "buddy" } """)
   }
 
   private val lotsoftext = GZip(HttpRoutes.of[IO] {
@@ -50,11 +51,9 @@ object MyMain extends IOApp {
     case GET -> Root / "twirl"  => Ok(view.html.index(s"hello from twirl ${new java.util.Date}"))
   }
 
-  private val blockingPool = Executors.newFixedThreadPool(4)
-  private val blocker = Blocker.liftExecutorService(blockingPool)
+ // private val blockingPool = Executors.newFixedThreadPool(4)
 
-  //val fs=fileService[IO](FileService.Config("./src/main/resources", blocker,pathPrefix = "/fs"))
-  private val fs=resourceService[IO](ResourceService.Config("/", blocker,pathPrefix = "/fs"))
+  private val fs=resourceServiceBuilder[IO]("/").withPathPrefix("/fs").toRoutes
 
   private val httpApp=(helloWorldService <+> greetService <+> literal <+> lotsoftext
     <+> fs <+> mystream <+> twirl).orNotFound
@@ -67,5 +66,10 @@ object MyMain extends IOApp {
       .compile
       .drain
       .as(ExitCode.Success)
+
+  // add doobie/quill endpoints
+  // H2 or postgres?
+  // unit test
+  // flywaydb
 
 }
