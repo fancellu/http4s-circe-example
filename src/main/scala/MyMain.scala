@@ -43,6 +43,10 @@ object MyMain extends IOApp {
       json"""{ "hello": "buddy" } """)
   }
 
+  private val echoPost = HttpRoutes.of[IO] {
+    case req @ POST -> Root / "echo"  => Ok(req.body)
+  }
+
   private val lotsoftext = GZip(HttpRoutes.of[IO] {
     case GET -> Root / "gzip"  => Ok(s"ABCD "*700)
   })
@@ -62,7 +66,7 @@ object MyMain extends IOApp {
   private val fs=resourceServiceBuilder[IO]("/").withPathPrefix("/fs").toRoutes
 
   private val httpApp=(helloWorldService <+> helloWorldService2 <+> greetService <+> literal <+> lotsoftext
-    <+> fs <+> mystream <+> twirl).orNotFound
+    <+> fs <+> mystream <+> twirl <+> echoPost).orNotFound
 
   def run(args: List[String]): IO[ExitCode] =
     BlazeServerBuilder[IO]
