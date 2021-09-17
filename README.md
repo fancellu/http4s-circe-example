@@ -29,6 +29,7 @@ Example of http4s server with various endpoints
 => HTML from a Play Twirl template
 
 POST with some payload, you should get it back(use postman or similar)
+
 /echo
 => Whatever you sent
 
