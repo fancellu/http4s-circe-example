@@ -33,4 +33,7 @@ POST with some payload, you should get it back(use postman or similar)
 /echo
 => Whatever you sent
 
+/random
+=> a random digit
+
 

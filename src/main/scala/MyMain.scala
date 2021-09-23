@@ -1,5 +1,6 @@
-import java.util.concurrent.Executors
+import cats.Functor
 
+import java.util.concurrent.Executors
 import cats.effect._
 import cats.implicits._
 import io.circe._
@@ -19,6 +20,7 @@ import org.http4s.twirl._
 import scala.concurrent.duration._
 import fs2.Stream
 import io.circe.generic.auto._
+import cats.effect.std.Random
 
 object MyMain extends IOApp {
 
@@ -43,6 +45,14 @@ object MyMain extends IOApp {
       json"""{ "hello": "buddy" } """)
   }
 
+  val randomDigitIO: IO[Int] = Random.scalaUtilRandom[IO].flatMap(_.nextIntBounded(10))
+
+  private val random = HttpRoutes.of[IO] {
+    case GET -> Root / "random"  => Ok {
+      randomDigitIO.map(_.toString)
+    }
+  }
+
   private val echoPost = HttpRoutes.of[IO] {
     case req @ POST -> Root / "echo"  => Ok(req.body)
   }
@@ -61,12 +71,10 @@ object MyMain extends IOApp {
     case GET -> Root / "twirl"  => Ok(view.html.index(s"hello from twirl ${new java.util.Date}"))
   }
 
- // private val blockingPool = Executors.newFixedThreadPool(4)
-
   private val fs=resourceServiceBuilder[IO]("/").withPathPrefix("/fs").toRoutes
 
   private val httpApp=(helloWorldService <+> helloWorldService2 <+> greetService <+> literal <+> lotsoftext
-    <+> fs <+> mystream <+> twirl <+> echoPost).orNotFound
+    <+> fs <+> mystream <+> twirl <+> echoPost <+> random).orNotFound
 
   def run(args: List[String]): IO[ExitCode] =
     BlazeServerBuilder[IO]
