@@ -36,4 +36,8 @@ POST with some payload, you should get it back(use postman or similar)
 /random
 => a random digit
 
+/counter
+=> incrementing digit (hacky)
 
+/counter2
+=> incrementing digit (Better, with Ref)

@@ -1,4 +1,5 @@
 import cats.Functor
+import cats.data.Kleisli
 
 import java.util.concurrent.Executors
 import cats.effect._
@@ -19,7 +20,6 @@ import org.http4s.twirl._
 
 import scala.concurrent.duration._
 import fs2.Stream
-import io.circe.generic.auto._
 import cats.effect.std.Random
 
 object MyMain extends IOApp {
@@ -53,6 +53,30 @@ object MyMain extends IOApp {
     }
   }
 
+  var myCounter: Int =0
+
+  // hack hack
+  private val counter = HttpRoutes.of[IO] {
+    case GET -> Root / "counter"  => Ok {
+        for {
+          _ <- IO.println(s"Counter=$myCounter ")
+          _ <- IO{myCounter=myCounter+1}
+        } yield myCounter.toString
+    }
+  }
+
+  val refIntIO: IO[Ref[IO, Int]] =Ref[IO].of(0)
+
+  // better with use of Ref
+  private def counter2(counter: Ref[IO, Int]) = HttpRoutes.of[IO] {
+    case GET -> Root / "counter2"  => Ok {
+        for {
+            i <- counter.getAndUpdate(_+1)
+            _ <- IO.println(s"Counter=$i")
+        } yield i.toString
+    }
+  }
+
   private val echoPost = HttpRoutes.of[IO] {
     case req @ POST -> Root / "echo"  => Ok(req.body)
   }
@@ -73,21 +97,24 @@ object MyMain extends IOApp {
 
   private val fs=resourceServiceBuilder[IO]("/").withPathPrefix("/fs").toRoutes
 
-  private val httpApp=(helloWorldService <+> helloWorldService2 <+> greetService <+> literal <+> lotsoftext
-    <+> fs <+> mystream <+> twirl <+> echoPost <+> random).orNotFound
+  private val httpApp: IO[Kleisli[IO, Request[IO], Response[IO]]] ={
+    for {
+      ref <- refIntIO
+      rest =(helloWorldService <+> helloWorldService2 <+> greetService <+> literal <+> lotsoftext <+>
+        fs <+> mystream <+> twirl <+> echoPost <+> random <+> counter <+> counter2(ref)).orNotFound
+    } yield rest
+  }
 
-  def run(args: List[String]): IO[ExitCode] =
-    BlazeServerBuilder[IO]
+  def run(args: List[String]): IO[ExitCode] = {
+    httpApp.flatMap( app=>
+     BlazeServerBuilder[IO]
       .bindHttp(8080, "localhost")
-      .withHttpApp(httpApp)
+      .withHttpApp(app)
       .serve
       .compile
       .drain
-      .as(ExitCode.Success)
+      .as(ExitCode.Success))
+  }
 
-  // add doobie/quill endpoints
-  // H2 or postgres?
-  // unit test
-  // flywaydb
 
 }
