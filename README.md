@@ -33,11 +33,11 @@ POST with some payload, you should get it back(use postman or similar)
 http://localhost:8080/echo
 => Whatever you sent
 
-/random
+http://localhost:8080/random
 => a random digit
 
-/counter
+http://localhost:8080/counter
 => incrementing digit (hacky)
 
-/counter2
+http://localhost:8080/counter2
 => incrementing digit (Better, with Ref)
