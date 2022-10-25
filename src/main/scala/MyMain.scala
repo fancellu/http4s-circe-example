@@ -114,14 +114,6 @@ object MyMain extends IOApp {
     } yield rest
   }
 
-
-  def doSomething[F[_] : Sync](): F[Unit] =
-    Logger[F].info("Logging Start Something") *>
-      Sync[F].delay(println("I could be doing anything")).attempt.flatMap {
-        case Left(e) => Logger[F].error(e)("Something Went Wrong")
-        case Right(_) => Sync[F].pure(())
-      }
-
   def run(args: List[String]): IO[ExitCode] = {
 
     for {
