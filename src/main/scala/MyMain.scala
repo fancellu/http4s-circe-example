@@ -22,12 +22,17 @@ import scala.concurrent.duration._
 import fs2.Stream
 import cats.effect.std.Random
 
+import org.typelevel.log4cats.Logger
+import org.typelevel.log4cats.slf4j.Slf4jLogger
+
 object MyMain extends IOApp {
+
+  implicit def logger[F[_] : Sync]: Logger[F] = Slf4jLogger.getLogger[F]
 
   case class Greeting(message: String)
 
   private val helloWorldService = HttpRoutes.of[IO] {
-    case GET -> Root / "hello" / name => Ok(s"Hello, $name.")
+    case GET -> Root / "hello" / name => Logger[IO].info("/hello endpoint") *> Ok(s"Hello, $name.")
   }
 
   object NameQueryParamMatcher extends QueryParamDecoderMatcher[String]("name")
@@ -37,7 +42,7 @@ object MyMain extends IOApp {
   }
 
   private val greetService = HttpRoutes.of[IO] {
-    case GET -> Root / "greet"  => Ok(Greeting("hello there").asJson)
+    case GET -> Root / "greet"  => Logger[IO].info("/greet endpoint") *>  Ok(Greeting("hello there").asJson)
   }
 
   private val literal = HttpRoutes.of[IO] {
@@ -49,7 +54,10 @@ object MyMain extends IOApp {
 
   private val random = HttpRoutes.of[IO] {
     case GET -> Root / "random"  => Ok {
-      randomDigitIO.map(_.toString)
+      for {
+        int <- randomDigitIO
+        _ <- Logger[IO].info(s"Random int is $int")
+      } yield int.toString
     }
   }
 
@@ -59,6 +67,7 @@ object MyMain extends IOApp {
   private val counter = HttpRoutes.of[IO] {
     case GET -> Root / "counter"  => Ok {
         for {
+          _ <- Logger[IO].info(s"Counter=$myCounter")
           _ <- IO.println(s"Counter=$myCounter ")
           _ <- IO{myCounter=myCounter+1}
         } yield myCounter.toString
@@ -105,15 +114,28 @@ object MyMain extends IOApp {
     } yield rest
   }
 
+
+  def doSomething[F[_] : Sync](): F[Unit] =
+    Logger[F].info("Logging Start Something") *>
+      Sync[F].delay(println("I could be doing anything")).attempt.flatMap {
+        case Left(e) => Logger[F].error(e)("Something Went Wrong")
+        case Right(_) => Sync[F].pure(())
+      }
+
   def run(args: List[String]): IO[ExitCode] = {
-    httpApp.flatMap( app=>
-     BlazeServerBuilder[IO]
-      .bindHttp(8080, "localhost")
-      .withHttpApp(app)
-      .serve
-      .compile
-      .drain
-      .as(ExitCode.Success))
+
+    for {
+      app <- httpApp
+      _ <- IO.println("logging with a simple IO.println")
+      _ <- Logger[IO].info("Logging with Logger[F]")
+      exitCode <- BlazeServerBuilder[IO]
+        .bindHttp(8080, "localhost")
+        .withHttpApp(app)
+        .serve
+        .compile
+        .drain
+        .as(ExitCode.Success)
+    } yield exitCode
   }
 
 

@@ -4,33 +4,33 @@ Example of http4s server with various endpoints
 
 ## Endpoints
 
-/greet
+http://localhost:8080/greet
 => json
 
-/hello/{name}
+http://localhost:8080/hello/{name}
 => text
 
-/hello?name=
+http://localhost:8080/hello?name=
 => text
 
-/literal
+http://localhost:8080/literal
 => json
 
-/gzip
+http://localhost:8080/gzip
 => lots of gzipped text
 
-/mystream
+http://localhost:8080/mystream
 => an endless chunked stream
 
-/fs/hello.txt
+http://localhost:8080/fs/hello.txt
 => static text from classpath
 
-/twirl
+http://localhost:8080/twirl
 => HTML from a Play Twirl template
 
 POST with some payload, you should get it back(use postman or similar)
 
-/echo
+http://localhost:8080/echo
 => Whatever you sent
 
 /random
