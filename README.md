@@ -41,3 +41,15 @@ http://localhost:8080/counter
 
 http://localhost:8080/counter2
 => incrementing digit (Better, with Ref)
+
+(Client examples talking to external web service https://jsonplaceholder.typicode.com/)
+
+- http://localhost:8080/client/users
+- http://localhost:8080/client/users/1
+- http://localhost:8080/client/users/999
+- http://localhost:8080/client/posts
+- http://localhost:8080/client/posts/1
+- http://localhost:8080/client/posts/999
+- http://localhost:8080/client/todos
+- http://localhost:8080/client/todos/1
+- http://localhost:8080/client/todos/999
