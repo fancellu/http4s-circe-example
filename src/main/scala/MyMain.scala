@@ -175,12 +175,10 @@ object MyMain extends IOApp {
       }
 
       // on error (of any type) we simply return some dummy post
-      postIO.orElse {
+      postIO.onError{th=> Logger[IO].error(s"***Error*** $th") *> IO.unit}.orElse {
         IO(Post(id, 1000, "", ""))
       }.flatMap(post => Ok(post))
 
-    //      postIO.onError{th=>
-    //        Logger[IO].error(s" Error $th") *> IO.unit}.flatMap(post => Ok(post))
   }
 
 
