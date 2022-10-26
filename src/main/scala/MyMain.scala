@@ -32,7 +32,9 @@ object MyMain extends IOApp {
   case class Greeting(message: String)
 
   private val helloWorldService = HttpRoutes.of[IO] {
-    case GET -> Root / "hello" / name => Logger[IO].info("/hello endpoint") *> Ok(s"Hello, $name.")
+    case req @ GET -> Root / "hello" / name =>
+      val remoteAddr = req.remoteAddr.map(ip=>s"You are on $ip").getOrElse("")
+      Logger[IO].info("/hello endpoint") *> Ok(s"Hello, $name. $remoteAddr")
   }
 
   object NameQueryParamMatcher extends QueryParamDecoderMatcher[String]("name")
