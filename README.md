@@ -42,7 +42,16 @@ http://localhost:8080/counter
 http://localhost:8080/counter2
 => incrementing digit (Better, with Ref)
 
-(Client examples talking to external web service https://jsonplaceholder.typicode.com/)
+http://localhost:8080/slow
+=> sleeps for 4 seconds
+
+(Client examples)
+
+Calling our own endpoints
+
+- http://localhost:8080/client/slow (timesout and fallsback to canned value)
+
+Talking to external web service https://jsonplaceholder.typicode.com/
 
 - http://localhost:8080/client/users
 - http://localhost:8080/client/users/1

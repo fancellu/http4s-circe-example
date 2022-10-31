@@ -108,6 +108,11 @@ object MyMain extends IOApp {
     case GET -> Root / "twirl" => Ok(view.html.index(s"hello from twirl ${new java.util.Date}"))
   }
 
+  private val slow = HttpRoutes.of[IO] {
+    case GET -> Root / "slow" => Logger[IO].info("Sleeping") *> IO.sleep(4.seconds) *> Logger[IO].info("Awake")  *> Ok("I am slow, because I have been sleeping")
+  }
+
+
   import org.http4s.blaze.client._
   import org.http4s.client._
   import scala.concurrent.ExecutionContext.global
@@ -181,6 +186,15 @@ object MyMain extends IOApp {
         IO(Post(id, 1000, "", ""))
       }.flatMap(post => Ok(post))
 
+    // calling ourself on the /slow endpoint
+    // returning the json as a string
+    case GET -> Root / "client" / "slow" =>
+      val out: IO[String] = BlazeClientBuilder[IO].resource.use { client =>
+        val url = "http://localhost:8080/slow"
+        client.expect[String](url)
+      }.timeoutTo(1.seconds, IO.pure("Timedout so falling back to canned value"))
+      out.flatMap(str => Ok(str))
+
   }
 
 
@@ -190,7 +204,7 @@ object MyMain extends IOApp {
     for {
       ref <- refIntIO
       rest = (helloWorldService <+> helloWorldService2 <+> greetService <+> literal <+> lotsoftext <+>
-        fs <+> mystream <+> twirl <+> echoPost <+> random <+> counter <+> counter2(ref) <+> clientRoute).orNotFound
+        fs <+> mystream <+> twirl <+> echoPost <+> random <+> counter <+> counter2(ref) <+> clientRoute <+> slow).orNotFound
     } yield rest
   }
 
