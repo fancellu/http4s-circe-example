@@ -20,4 +20,6 @@ libraryDependencies ++= Seq(
   "org.slf4j" % "slf4j-simple" % "1.7.36",
 )
 
+libraryDependencies += "com.alejandrohdezma" %% "http4s-munit" % "0.14.0" % Test
+
 enablePlugins(SbtTwirl)

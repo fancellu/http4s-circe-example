@@ -1,4 +1,4 @@
-import cats.Functor
+
 import cats.data.Kleisli
 
 import java.util.concurrent.Executors
@@ -31,7 +31,7 @@ object MyMain extends IOApp {
 
   case class Greeting(message: String)
 
-  private val helloWorldService = HttpRoutes.of[IO] {
+  val helloWorldService = HttpRoutes.of[IO] {
     case req @ GET -> Root / "hello" / name =>
       val remoteAddr = req.remoteAddr.map(ip=>s"You are on $ip").getOrElse("")
       Logger[IO].info("/hello endpoint") *> Ok(s"Hello, $name. $remoteAddr")
@@ -39,22 +39,22 @@ object MyMain extends IOApp {
 
   object NameQueryParamMatcher extends QueryParamDecoderMatcher[String]("name")
 
-  private val helloWorldService2 = HttpRoutes.of[IO] {
+  val helloWorldService2 = HttpRoutes.of[IO] {
     case GET -> Root / "hello" :? NameQueryParamMatcher(name) => Ok(s"""Hello, $name.""")
   }
 
-  private val greetService = HttpRoutes.of[IO] {
+  val greetService = HttpRoutes.of[IO] {
     case GET -> Root / "greet" => Logger[IO].info("/greet endpoint") *> Ok(Greeting("hello there").asJson)
   }
 
-  private val literal = HttpRoutes.of[IO] {
+  val literal = HttpRoutes.of[IO] {
     case GET -> Root / "literal" => Ok(
       json"""{ "hello": "buddy" } """)
   }
 
   val randomDigitIO: IO[Int] = Random.scalaUtilRandom[IO].flatMap(_.nextIntBounded(10))
 
-  private val random = HttpRoutes.of[IO] {
+  val random = HttpRoutes.of[IO] {
     case GET -> Root / "random" => Ok {
       for {
         int <- randomDigitIO
@@ -66,7 +66,7 @@ object MyMain extends IOApp {
   var myCounter: Int = 0
 
   // hack hack
-  private val counter = HttpRoutes.of[IO] {
+  val counter = HttpRoutes.of[IO] {
     case GET -> Root / "counter" => Ok {
       for {
         _ <- Logger[IO].info(s"Counter=$myCounter")
@@ -81,7 +81,7 @@ object MyMain extends IOApp {
   val refIntIO: IO[Ref[IO, Int]] = Ref[IO].of(0)
 
   // better with use of Ref
-  private def counter2(counter: Ref[IO, Int]) = HttpRoutes.of[IO] {
+  def counter2(counter: Ref[IO, Int]) = HttpRoutes.of[IO] {
     case GET -> Root / "counter2" => Ok {
       for {
         i <- counter.getAndUpdate(_ + 1)
@@ -90,25 +90,25 @@ object MyMain extends IOApp {
     }
   }
 
-  private val echoPost = HttpRoutes.of[IO] {
+  val echoPost = HttpRoutes.of[IO] {
     case req@POST -> Root / "echo" => Ok(req.body)
   }
 
-  private val lotsoftext = GZip(HttpRoutes.of[IO] {
+  val lotsoftext = GZip(HttpRoutes.of[IO] {
     case GET -> Root / "gzip" => Ok(s"ABCD " * 700)
   })
 
-  private val seconds = Stream.awakeEvery[IO](2.second)
+  val seconds = Stream.awakeEvery[IO](2.second)
 
-  private val mystream = HttpRoutes.of[IO] {
+  val mystream = HttpRoutes.of[IO] {
     case GET -> Root / "mystream" => Ok(seconds.map(dur => dur.toString))
   }
 
-  private val twirl = HttpRoutes.of[IO] {
+  val twirl = HttpRoutes.of[IO] {
     case GET -> Root / "twirl" => Ok(view.html.index(s"hello from twirl ${new java.util.Date}"))
   }
 
-  private val slow = HttpRoutes.of[IO] {
+  val slow = HttpRoutes.of[IO] {
     case GET -> Root / "slow" => Logger[IO].info("Sleeping") *> IO.sleep(4.seconds) *> Logger[IO].info("Awake")  *> Ok("I am slow, because I have been sleeping")
   }
 
@@ -129,7 +129,7 @@ object MyMain extends IOApp {
   //  implicit val postsDecoder = jsonOf[IO, List[Post]]
   //  implicit val postsEncoder = jsonEncoderOf[IO, List[Post]]
 
-  private val clientRoute = HttpRoutes.of[IO] {
+  val clientRoute = HttpRoutes.of[IO] {
     // returning the json as a string
     case GET -> Root / "client" / "todos" =>
       val out: IO[String] = BlazeClientBuilder[IO].resource.use { client =>
@@ -198,7 +198,7 @@ object MyMain extends IOApp {
   }
 
 
-  private val fs = resourceServiceBuilder[IO]("/").withPathPrefix("/fs").toRoutes
+  val fs = resourceServiceBuilder[IO]("/").withPathPrefix("/fs").toRoutes
 
   private val httpApp: IO[Kleisli[IO, Request[IO], Response[IO]]] = {
     for {
