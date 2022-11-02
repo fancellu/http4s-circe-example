@@ -1,8 +1,8 @@
 <configuration>
+
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-        <withJansi>true</withJansi>
         <encoder>
-            <pattern>[%thread] %highlight(%-5level) %cyan(%logger{15}) - %msg %n</pattern>
+            <pattern>[%thread] %d{HH:mm:ss.SSS} %highlight(%-5level) %cyan(%logger{15}) - %msg %n</pattern>
         </encoder>
     </appender>
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
@@ -15,11 +15,9 @@
             <pattern>%d{yyyy-MM-dd'T'HH:mm:ss'Z'} - %m%n</pattern>
         </encoder>
     </appender>
-    <root level="DEBUG">
-        <appender-ref ref="FILE" />
+    <logger name="org.http4s.blaze" level="OFF"/>
+    <logger name="org.http4s.blazecore" level="OFF"/>
+    <root level="debug">
+        <appender-ref ref="STDOUT" />
     </root>
-    <logger name="FILE" additivity="false">
-        <level value="INFO" />
-        <appender-ref ref="FILE" />
-    </logger>
 </configuration>

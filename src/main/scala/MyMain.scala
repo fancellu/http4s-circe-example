@@ -1,7 +1,4 @@
 
-import cats.data.Kleisli
-
-import java.util.concurrent.Executors
 import cats.effect._
 import cats.implicits._
 import io.circe._
@@ -15,8 +12,8 @@ import org.http4s.implicits._
 import org.http4s.blaze.server._
 import org.http4s.server.middleware._
 import org.http4s.server.staticcontent._
-import play.twirl.api.Html
-import org.http4s.twirl._
+//import play.twirl.api.Html
+//import org.http4s.twirl._
 
 import scala.concurrent.duration._
 import fs2.Stream
@@ -25,7 +22,7 @@ import cats.effect.std.Random
 import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 
-object MyMain extends IOApp {
+object MyMain extends IOApp.Simple {
 
   implicit def logger[F[_] : Sync]: Logger[F] = Slf4jLogger.getLogger[F]
 
@@ -104,9 +101,9 @@ object MyMain extends IOApp {
     case GET -> Root / "mystream" => Ok(seconds.map(dur => dur.toString))
   }
 
-  val twirl = HttpRoutes.of[IO] {
-    case GET -> Root / "twirl" => Ok(view.html.index(s"hello from twirl ${new java.util.Date}"))
-  }
+//  val twirl = HttpRoutes.of[IO] {
+//    case GET -> Root / "twirl" => Ok(view.html.index(s"hello from twirl ${new java.util.Date}"))
+//  }
 
   val slow = HttpRoutes.of[IO] {
     case GET -> Root / "slow" => Logger[IO].info("Sleeping") *> IO.sleep(4.seconds) *> Logger[IO].info("Awake")  *> Ok("I am slow, because I have been sleeping")
@@ -187,7 +184,7 @@ object MyMain extends IOApp {
       }.flatMap(post => Ok(post))
 
     // calling ourself on the /slow endpoint
-    // returning the json as a string
+    // returning the text as a string
     case GET -> Root / "client" / "slow" =>
       val out: IO[String] = BlazeClientBuilder[IO].resource.use { client =>
         val url = "http://localhost:8080/slow"
@@ -195,33 +192,39 @@ object MyMain extends IOApp {
       }.timeoutTo(1.seconds, IO.pure("Timedout so falling back to canned value"))
       out.flatMap(str => Ok(str))
 
-  }
+    // calling ourself on the /slow endpoint, twice, in parallel
+    // returning the text as a string
+    case GET -> Root / "client" / "twiceslow" =>
+      val outTuple = BlazeClientBuilder[IO].resource.use { client =>
+        val url = "http://localhost:8080/slow"
+        (client.expect[String](url),client.expect[String](url)).parTupled
+      }
+      Logger[IO].info("/twiceslow endpoint ") *> outTuple.flatMap(tuple => Logger[IO].info("ended ") *> Ok(tuple._1+"\n"+tuple._2))
 
+  }
 
   val fs = resourceServiceBuilder[IO]("/").withPathPrefix("/fs").toRoutes
 
-  private val httpApp: IO[Kleisli[IO, Request[IO], Response[IO]]] = {
+  private val httpApp: IO[HttpApp[IO]] = {
     for {
       ref <- refIntIO
-      rest = (helloWorldService <+> helloWorldService2 <+> greetService <+> literal <+> lotsoftext <+>
-        fs <+> mystream <+> twirl <+> echoPost <+> random <+> counter <+> counter2(ref) <+> clientRoute <+> slow).orNotFound
+      routes: HttpRoutes[IO] = (helloWorldService <+> helloWorldService2 <+> greetService <+> literal <+> lotsoftext <+>
+        fs <+> mystream <+> echoPost <+> random <+> counter <+> counter2(ref) <+> clientRoute <+> slow)
+      rest: HttpApp[IO] = routes.orNotFound
     } yield rest
   }
 
-  def run(args: List[String]): IO[ExitCode] = {
+  val run= {
 
     for {
       app <- httpApp
       _ <- IO.println("logging with a simple IO.println")
       _ <- Logger[IO].info("Logging with Logger[F]")
-      exitCode <- BlazeServerBuilder[IO]
+      _ <- BlazeServerBuilder[IO]
         .bindHttp(8080, "localhost")
         .withHttpApp(app)
-        .serve
-        .compile
-        .drain
-        .as(ExitCode.Success)
-    } yield exitCode
+        .resource.useForever
+    } yield ()
   }
 
 

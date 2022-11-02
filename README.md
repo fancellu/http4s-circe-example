@@ -25,9 +25,6 @@ http://localhost:8080/mystream
 http://localhost:8080/fs/hello.txt
 => static text from classpath
 
-http://localhost:8080/twirl
-=> HTML from a Play Twirl template
-
 POST with some payload, you should get it back(use postman or similar)
 
 http://localhost:8080/echo
@@ -50,6 +47,7 @@ http://localhost:8080/slow
 Calling our own endpoints
 
 - http://localhost:8080/client/slow (timesout and fallsback to canned value)
+- http://localhost:8080/client/twiceslow (calls /slow twice, in parallel)
 
 Talking to external web service https://jsonplaceholder.typicode.com/
 

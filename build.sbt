@@ -13,13 +13,13 @@ libraryDependencies ++= Seq(
   "org.http4s" %% "http4s-blaze-server" % "0.23.12",
   "org.http4s" %% "http4s-blaze-client" % "0.23.12",
   "org.http4s" %% "http4s-circe" % http4sVersion,
-  "org.http4s" %% "http4s-twirl" % http4sVersion,
+//  "org.http4s" %% "http4s-twirl" % http4sVersion,
   "io.circe" %% "circe-generic" % "0.14.3",
   "io.circe" %% "circe-literal" % "0.14.3",
-  "org.typelevel" %% "log4cats-slf4j"   % "2.5.0",
-  "org.slf4j" % "slf4j-simple" % "1.7.36",
+  "org.typelevel" %% "log4cats-core"   % "2.5.0",
+  "ch.qos.logback" % "logback-classic" % "1.2.2"
 )
 
 libraryDependencies += "com.alejandrohdezma" %% "http4s-munit" % "0.14.0" % Test
 
-enablePlugins(SbtTwirl)
+//enablePlugins(SbtTwirl)

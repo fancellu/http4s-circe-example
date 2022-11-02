@@ -12,7 +12,7 @@ import org.http4s.circe._
 
 class MainRoutesSuite extends munit.Http4sHttpRoutesSuite {
   override val routes: HttpRoutes[IO] = helloWorldService <+> helloWorldService2 <+> greetService <+> MyMain.literal <+> lotsoftext <+>
-          fs <+> MyMain.twirl <+> echoPost
+          fs <+> echoPost
 
 
   test(GET(uri"hello" / "Dino")).alias("Say hello to Dino") { response =>
@@ -41,9 +41,9 @@ class MainRoutesSuite extends munit.Http4sHttpRoutesSuite {
     assertIO(response.as[String], "Hello")
   }
 
-  test(GET(uri"twirl")).alias("Use twirl") { response =>
-    assertIO(response.as[String].map(_.contains("hello from twirl")), true)
-  }
+//  test(GET(uri"twirl")).alias("Use twirl") { response =>
+//    assertIO(response.as[String].map(_.contains("hello from twirl")), true)
+//  }
 
   test(Request[IO](POST, uri"echo", body = fs2.Stream.emits("woof".getBytes))).alias("posting a body") { response =>
     assertIO(response.as[String], "woof")
