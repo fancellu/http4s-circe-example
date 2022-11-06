@@ -2,6 +2,8 @@
 
 Example of http4s server with various endpoints
 
+To run ```sbt run``` or you can use sbt-revolver with ```sbt ~reStart```
+
 ## Endpoints
 
 http://localhost:8080/greet
