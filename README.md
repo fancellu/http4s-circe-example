@@ -27,6 +27,9 @@ http://localhost:8080/mystream
 http://localhost:8080/fs/hello.txt
 => static text from classpath
 
+http://localhost:8080/fs/form.html
+=> HTML Form, which takes username and handles it via UrlForm
+
 POST with some payload, you should get it back(use postman or similar)
 
 http://localhost:8080/echo

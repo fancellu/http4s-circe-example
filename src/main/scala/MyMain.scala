@@ -205,11 +205,19 @@ object MyMain extends IOApp.Simple {
 
   val fs = resourceServiceBuilder[IO]("/").withPathPrefix("/fs").toRoutes
 
+  val handleForm = HttpRoutes.of[IO] {
+    case req@POST -> Root / "handle_form" =>
+      req.decode[UrlForm] { urlForm=>
+        val userName=urlForm.getFirstOrElse("username","")
+        Logger[IO].info(s"$userName") *> Ok(s"Hello $userName")
+      }
+  }
+
   private val httpApp: IO[HttpApp[IO]] = {
     for {
       ref <- refIntIO
       routes: HttpRoutes[IO] = (helloWorldService <+> helloWorldService2 <+> greetService <+> literal <+> lotsoftext <+>
-        fs <+> mystream <+> echoPost <+> random <+> counter <+> counter2(ref) <+> clientRoute <+> slow)
+        fs <+> mystream <+> echoPost <+> random <+> counter <+> counter2(ref) <+> clientRoute <+> slow <+> handleForm)
       rest: HttpApp[IO] = routes.orNotFound
     } yield rest
   }
