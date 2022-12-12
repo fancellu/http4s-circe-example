@@ -65,3 +65,9 @@ Talking to external web service https://jsonplaceholder.typicode.com/
 - http://localhost:8080/client/todos
 - http://localhost:8080/client/todos/1
 - http://localhost:8080/client/todos/999
+
+Talking to OpenAI Dall-E
+
+(To use it you'll have to fill in your OpenAI `OPENAI_API_KEY` in the Environment)
+
+- http://localhost:8080/openai/dalle/a+ginger+cat,+wearing+round+black+glasses,+riding+a+bike+and+smoking+a+pipe,+photorealistic

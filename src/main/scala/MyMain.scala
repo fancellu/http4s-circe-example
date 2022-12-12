@@ -1,17 +1,22 @@
 
+import cats.data.OptionT
 import cats.effect._
 import cats.implicits._
+import com.felstar.openai.image.{CreateImageRequest, ImagesResponse}
 import io.circe._
 import io.circe.generic.auto._
 import io.circe.syntax._
 import io.circe.literal._
 import org.http4s._
 import org.http4s.circe._
-import org.http4s.dsl.io._
+import org.http4s.dsl.io.{Ok, _}
 import org.http4s.implicits._
 import org.http4s.blaze.server._
+import org.http4s.dsl.Http4sDsl
+import org.http4s.headers.Authorization
 import org.http4s.server.middleware._
 import org.http4s.server.staticcontent._
+import org.typelevel.ci.CIString
 //import play.twirl.api.Html
 //import org.http4s.twirl._
 
@@ -201,6 +206,45 @@ object MyMain extends IOApp.Simple {
       }
       Logger[IO].info("/twiceslow endpoint ") *> outTuple.flatMap(tuple => Logger[IO].info("ended ") *> Ok(tuple._1+"\n"+tuple._2))
 
+    case GET -> Root / "openai" / "dalle" / prompt =>
+      import org.http4s.circe.CirceEntityCodec.circeEntityDecoder
+      import org.http4s.circe.CirceEntityCodec.circeEntityEncoder
+      import org.http4s.circe._
+      import org.http4s.client.dsl.io._
+      import org.http4s.headers._
+
+      val imageRequest=CreateImageRequest(prompt = prompt)
+
+      val openAIKey: String =  sys.env.getOrElse("OPENAI_API_KEY", "ENTER_OPENAI_API_KEY")
+
+      val postRequest = POST(
+        imageRequest.asJson.deepDropNullValues,
+        uri"https://api.openai.com/v1/images/generations" ,
+        Header.Raw(CIString("Content-Type"),"application/json"),
+        Authorization(Credentials.Token(AuthScheme.Bearer, openAIKey))
+      )
+
+      val imagesResponseIO: IO[ImagesResponse] = BlazeClientBuilder[IO].resource.use { client =>
+        client.expect[ImagesResponse](postRequest)
+      }
+
+      val url: OptionT[IO, String] =for {
+        imagesResponse <- OptionT.liftF(imagesResponseIO)
+        url <- OptionT.fromOption[IO](imagesResponse.data.headOption.flatMap(_.url))
+      } yield url
+
+      import _root_.scalatags.Text.all._
+      import org.http4s.scalatags._
+
+      def image(url:String)= html(body(div(img(src:=url))))
+      val notFound= html(body(div(h1("Not found"))))
+
+      val finalResponse: IO[Response[IO]] = for {
+        urlOption: Option[String] <- url.value
+        response: Response[IO] <- urlOption.map(url => Ok(image(url))).getOrElse(Ok(notFound))
+      } yield response
+
+      finalResponse
   }
 
   val fs = resourceServiceBuilder[IO]("/").withPathPrefix("/fs").toRoutes
