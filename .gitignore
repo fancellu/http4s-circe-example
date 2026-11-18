@@ -2,3 +2,8 @@
 /project/target/
 /project/project/target/
 /.idea/
+/.bsp/
+/.metals/
+/.bloop/
+/.vscode/
+/logs/
