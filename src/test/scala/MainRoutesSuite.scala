@@ -5,6 +5,7 @@ import io.circe.Json
 import io.circe.literal._
 import org.http4s._
 import org.http4s.circe._
+import org.http4s.client.Client
 
 class MainRoutesSuite extends munit.Http4sSuite {
 
@@ -60,5 +61,47 @@ class MainRoutesSuite extends munit.Http4sSuite {
   test("handle_form greets the posted username") {
     val req = Request[IO](POST, uri"/handle_form").withEntity(UrlForm("username" -> "Dino"))
     assertIO(handleForm.orNotFound.run(req).flatMap(_.as[String]), "Hello Dino")
+  }
+
+  // ---------- Tests for the fixed routes ----------
+
+  private def stubClient(status: Status, body: Json): Client[IO] =
+    Client.fromHttpApp(HttpApp[IO] { _ =>
+      Response[IO](status).withEntity(body).pure[IO]
+    })
+
+  test("counter logs and answers with the same value") {
+    val app = counter.orNotFound
+    for {
+      first <- app.run(Request[IO](GET, uri"/counter")).flatMap(_.bodyText.compile.string)
+      second <- app.run(Request[IO](GET, uri"/counter")).flatMap(_.bodyText.compile.string)
+    } yield assertEquals((first, second), ("0", "1"))
+  }
+
+  test("echo caps the size of the echoed body") {
+    val req = Request[IO](POST, uri"/echo").withEntity("x" * 70000)
+    assertIO(
+      echoPost.orNotFound.run(req).flatMap(_.bodyText.compile.string).map(_.length.toInt),
+      maxEchoBytes.toInt
+    )
+  }
+
+  test("client users route answers 500 when the upstream call fails") {
+    val failing = stubClient(Status.InternalServerError, json"""{ "error": "upstream down" }""")
+    assertIO(
+      clientRoutes(failing).orNotFound.run(Request[IO](GET, uri"/client/users/1")).map(_.status.code),
+      500
+    )
+  }
+
+  test("openai error path answers 500 instead of 200") {
+    val failing = stubClient(Status.BadRequest, json"""{ "error": { "message": "invalid key" } }""")
+    val app = openAIRoutes(failing, Some("test-key")).orNotFound
+    assertIO(app.run(Request[IO](GET, uri"/openai/image?prompt=a+cat")).map(_.status.code), 500)
+  }
+
+  test("openai refuses when the key is missing") {
+    val app = openAIRoutes(stubClient(Status.Ok, json"""{ "created": 0, "data": [] }"""), None).orNotFound
+    assertIO(app.run(Request[IO](GET, uri"/openai/image?prompt=a+cat")).map(_.status.code), 400)
   }
 }

@@ -23,7 +23,8 @@ import scala.concurrent.duration._
 
 object MyMain extends IOApp.Simple {
 
-  implicit def logger[F[_]: Sync]: Logger[F] = Slf4jLogger.getLogger[F]
+  // Was an implicit def, so every call site built a new logger.
+  implicit val logger: Logger[IO] = Slf4jLogger.getLogger[IO]
 
   val Host: Host = host"localhost"
   val Port: Port = port"8080"
@@ -69,11 +70,13 @@ object MyMain extends IOApp.Simple {
   val counter = HttpRoutes.of[IO] {
     case GET -> Root / "counter" => Ok {
       for {
-        _ <- Logger[IO].info(s"Counter=$myCounter")
+        // Read once, so the logged value and the returned value are the same.
+        i <- IO(myCounter)
         _ <- IO {
-          myCounter = myCounter + 1
+          myCounter = i + 1
         }
-      } yield myCounter.toString
+        _ <- Logger[IO].info(s"Counter=$i")
+      } yield i.toString
     }
   }
 
@@ -89,8 +92,11 @@ object MyMain extends IOApp.Simple {
     }
   }
 
+  // EntityDecoder's maxSize does not protect a raw body echo, so cap it here.
+  val maxEchoBytes: Long = 64 * 1024
+
   val echoPost = HttpRoutes.of[IO] {
-    case req @ POST -> Root / "echo" => Ok(req.body)
+    case req @ POST -> Root / "echo" => Ok(req.body.take(maxEchoBytes))
   }
 
   val lotsoftext = GZip(HttpRoutes.of[IO] {
@@ -100,7 +106,9 @@ object MyMain extends IOApp.Simple {
   val seconds = Stream.awakeEvery[IO](2.second)
 
   val mystream = HttpRoutes.of[IO] {
-    case GET -> Root / "mystream" => Ok(seconds.map(dur => dur.toString + "\n"))
+    // Bounded: an unbounded awakeEvery has no request timeout, so a stalled
+    // client would pin a fiber and a connection for the life of the process.
+    case GET -> Root / "mystream" => Ok(seconds.take(10).map(dur => dur.toString + "\n"))
   }
 
   val slow = HttpRoutes.of[IO] {
@@ -109,7 +117,9 @@ object MyMain extends IOApp.Simple {
         Ok("I am slow, because I have been sleeping")
   }
 
-  val fs = resourceServiceBuilder[IO]("/").withPathPrefix("/fs").toRoutes
+  // Serves one directory instead of the whole classpath root (which exposed
+  // logback.xml and form.html through /fs).
+  val fs = resourceServiceBuilder[IO]("static").withPathPrefix("/fs").toRoutes
 
   val handleForm = HttpRoutes.of[IO] {
     case req @ POST -> Root / "handle_form" =>
@@ -145,11 +155,16 @@ object MyMain extends IOApp.Simple {
       client.expect[String](HOST / "users").flatMap(str => Ok(str))
 
     case GET -> Root / "client" / "users" / IntVar(id) =>
-      // we return a string with 200 on error
+      // Log the failure and answer with 500; answering 200 with prose made
+      // success and failure indistinguishable to the caller.
       client
         .expect[String](HOST / "users" / id)
-        .handleError(th => s"Something went wrong $th")
-        .flatMap(str => Ok(str))
+        .onError(th => Logger[IO].error(s"***Error*** $th"))
+        .attempt
+        .flatMap {
+          case Right(str) => Ok(str)
+          case Left(th)   => InternalServerError(s"Something went wrong $th")
+        }
 
     // returning as a case class, using codec to derive without having to do it myself
     case GET -> Root / "client" / "posts" =>
@@ -191,7 +206,11 @@ object MyMain extends IOApp.Simple {
 
   object PromptQueryParamMatcher extends QueryParamDecoderMatcher[String]("prompt")
 
-  def openAIRoutes(client: Client[IO]) = HttpRoutes.of[IO] {
+  // apiKey is a parameter with the env var as its default so the error path can be tested.
+  def openAIRoutes(
+    client: Client[IO],
+    apiKey: Option[String] = sys.env.get("OPENAI_API_KEY").filter(_.nonEmpty)
+  ) = HttpRoutes.of[IO] {
     case GET -> Root / "openai" / "image" :? PromptQueryParamMatcher(prompt) =>
       import _root_.scalatags.Text.all._
       import org.http4s.circe.CirceEntityCodec._
@@ -200,7 +219,7 @@ object MyMain extends IOApp.Simple {
 
       def page(content: Frag) = html(body(h3(prompt), content))
 
-      sys.env.get("OPENAI_API_KEY").filter(_.nonEmpty) match {
+      apiKey match {
         case None =>
           BadRequest("OPENAI_API_KEY environment variable is not set")
         case Some(openAIKey) =>
@@ -210,9 +229,10 @@ object MyMain extends IOApp.Simple {
             Authorization(Credentials.Token(AuthScheme.Bearer, openAIKey))
           )
 
-          // expectOr lets us surface OpenAI's error body (bad key, quota, moderation...) rather than just the status
+          // expectOr lets us surface OpenAI's error body (bad key, quota, moderation...) rather than just the status.
+          // as[String] cannot decode a JSON object, so read the body as text.
           val call = client.expectOr[ImagesResponse](request) { resp =>
-            resp.as[String].map(body => new RuntimeException(s"${resp.status}: $body"))
+            resp.bodyText.compile.string.map(body => new RuntimeException(s"${resp.status}: $body"))
           }
 
           call.attempt.flatMap {
@@ -222,7 +242,9 @@ object MyMain extends IOApp.Simple {
                 case None       => Ok(page(h1("No image returned")))
               }
             case Left(th) =>
-              Logger[IO].error(s"OpenAI call failed: $th") *> Ok(page(div(h1("Image generation failed"), pre(th.toString))))
+              // The upstream body can carry account/quota detail: log it, keep the page generic.
+              Logger[IO].error(s"OpenAI call failed: $th") *>
+                InternalServerError(page(div(h1("Image generation failed"))))
           }
       }
   }

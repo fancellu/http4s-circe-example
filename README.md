@@ -49,21 +49,23 @@ All examples assume the server is running on `http://localhost:8080`.
 | Method | Path | Returns |
 | --- | --- | --- |
 | GET | [/gzip](http://localhost:8080/gzip) | 3500 chars of text, gzipped by the `GZip` middleware |
-| GET | [/mystream](http://localhost:8080/mystream) | An endless chunked stream, emitting elapsed time every 2 seconds |
-| GET | [/fs/hello.txt](http://localhost:8080/fs/hello.txt) | Static text served from the classpath |
+| GET | [/mystream](http://localhost:8080/mystream) | A chunked stream, emitting elapsed time every 2 seconds, capped at 10 lines |
+| GET | [/fs/hello.txt](http://localhost:8080/fs/hello.txt) | Static text served from the `static/` classpath directory |
 | GET | [/fs/form.html](http://localhost:8080/fs/form.html) | An HTML form that posts to `/handle_form` |
 | GET | [/slow](http://localhost:8080/slow) | Sleeps 4 seconds, then replies |
 
+Only `src/main/resources/static/` is exposed under `/fs`, so `logback.xml` is not reachable as `/fs/logback.xml`.
+
 ```bash
 curl --compressed http://localhost:8080/gzip
-curl -N http://localhost:8080/mystream      # Ctrl+C to stop
+curl -N http://localhost:8080/mystream      # ten lines, then the response ends
 ```
 
 ### POST
 
 | Method | Path | Returns |
 | --- | --- | --- |
-| POST | /echo | Whatever body you sent |
+| POST | /echo | Whatever body you sent, up to 64 KiB |
 | POST | /handle_form | `Hello {username}`, decoded via `UrlForm` |
 
 ```bash
@@ -96,7 +98,7 @@ Talking to the external service <https://jsonplaceholder.typicode.com/>:
 | [/client/todos](http://localhost:8080/client/todos), [/client/todos/1](http://localhost:8080/client/todos/1) | Upstream JSON passed through as a string |
 | [/client/todos/999](http://localhost:8080/client/todos/999) | Upstream 404 mapped to our own 404 |
 | [/client/users](http://localhost:8080/client/users), [/client/users/1](http://localhost:8080/client/users/1) | Upstream JSON passed through as a string |
-| [/client/users/999](http://localhost:8080/client/users/999) | Errors turned into a 200 with an error message |
+| [/client/users/999](http://localhost:8080/client/users/999) | Errors are logged and answered with a 500 |
 | [/client/posts](http://localhost:8080/client/posts), [/client/posts/1](http://localhost:8080/client/posts/1) | JSON decoded into `Post` case classes, then re-encoded |
 | [/client/posts/999](http://localhost:8080/client/posts/999) | Any error replaced with a dummy `Post` |
 
@@ -117,14 +119,15 @@ Then open:
 
 - <http://localhost:8080/openai/image?prompt=a+ginger+cat,+wearing+round+black+glasses,+riding+a+bike+and+smoking+a+pipe,+photorealistic>
 
-If the key is missing you get a `400`. If OpenAI rejects the request (bad key, no credit, moderation), the page shows OpenAI's error message.
+If the key is missing you get a `400`. If OpenAI rejects the request (bad key, no credit, moderation), you get a `500` with a generic page: OpenAI's error body is written to the log, not to the browser.
 
 ## Project layout
 
 ```text
-build.sbt                          dependencies
-project/plugins.sbt                sbt-revolver
-src/main/scala/MyMain.scala        all routes, client examples and server wiring
-src/main/resources/                logback.xml, hello.txt, form.html (served under /fs)
-src/test/scala/MainRoutesSuite.scala  route tests with http4s-munit
+build.sbt                            dependencies
+project/plugins.sbt                  sbt-revolver
+src/main/scala/MyMain.scala          all routes, client examples and server wiring
+src/main/resources/logback.xml       logging config (not served)
+src/main/resources/static/           hello.txt, form.html — the only directory served under /fs
+src/test/scala/MainRoutesSuite.scala route tests with http4s-munit, stub client for error paths
 ```
