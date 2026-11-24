@@ -4,7 +4,7 @@ version := "0.3"
 
 scalaVersion := "2.13.18"
 
-val http4sVersion = "0.23.38"
+val http4sVersion = "0.23.39"
 val circeVersion  = "0.14.17"
 
 scalacOptions ++= Seq("-deprecation", "-feature")
@@ -19,8 +19,8 @@ libraryDependencies ++= Seq(
   "io.circe"          %% "circe-literal"       % circeVersion,
   "org.typelevel"     %% "cats-effect"         % "3.7.1",
   "org.typelevel"     %% "log4cats-slf4j"      % "2.8.0",
-  "ch.qos.logback"     % "logback-classic"     % "1.6.6",
-  "com.alejandrohdezma" %% "http4s-munit"      % "3.0.0" % Test
+  "ch.qos.logback"     % "logback-classic"     % "1.6.8",
+  "com.alejandrohdezma" %% "http4s-munit"      % "4.0.0" % Test
 )
 
 addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")

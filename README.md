@@ -10,12 +10,12 @@ calling other services with an HTTP client, HTML with scalatags, and testing rou
 | --- | --- |
 | Scala | 2.13.18 |
 | sbt | 1.13.1 |
-| http4s (Ember server & client, DSL, circe) | 0.23.38 |
+| http4s (Ember server & client, DSL, circe) | 0.23.39 |
 | cats-effect | 3.7.1 |
 | circe (generic, literal) | 0.14.17 |
-| log4cats-slf4j + logback | 2.8.0 / 1.6.6 |
+| log4cats-slf4j + logback | 2.8.0 / 1.6.8 |
 | http4s-scalatags | 0.25.4 |
-| http4s-munit (tests) | 3.0.0 |
+| http4s-munit (tests) | 4.0.0 |
 
 ## Prerequisites
 
